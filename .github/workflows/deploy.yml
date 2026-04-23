@@ -25,7 +25,13 @@ jobs:
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_CHAT_ID_GROUP=${{ secrets.TELEGRAM_CHAT_ID_GROUP }}
-          FRONTEND_URL=http://95.65.174.216:8085
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          FIREBASE_CLIENT_API_KEY=${{ secrets.FIREBASE_CLIENT_API_KEY }}
+          FIREBASE_CLIENT_AUTH_DOMAIN=${{ secrets.FIREBASE_CLIENT_AUTH_DOMAIN }}
+          FIREBASE_CLIENT_STORAGE_BUCKET=${{ secrets.FIREBASE_CLIENT_STORAGE_BUCKET }}
+          FIREBASE_CLIENT_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_CLIENT_MESSAGING_SENDER_ID }}
+          FIREBASE_CLIENT_APP_ID=${{ secrets.FIREBASE_CLIENT_APP_ID }}
+          FIREBASE_CLIENT_VAPID_KEY=${{ secrets.FIREBASE_CLIENT_VAPID_KEY }}
           "@ | Out-File "C:\inetpub\wwwroot\Balina-api\.env" -Encoding utf8
 
       - name: Restart backend with new env

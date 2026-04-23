@@ -19,8 +19,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin: any, cb: any) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error('CORS: ' + origin + ' not allowed'));
+      cb(null, !origin || allowedOrigins.includes(origin));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
