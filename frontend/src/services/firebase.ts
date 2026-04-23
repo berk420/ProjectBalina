@@ -1,7 +1,7 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
 
-const API_URL = process.env.REACT_APP_API_URL ?? '';
+const API_URL = process.env.REACT_APP_API_URL ?? 'https://balinaapi.testprocess.com.tr';
 
 let messaging: Messaging | null = null;
 let vapidKey: string | undefined;
