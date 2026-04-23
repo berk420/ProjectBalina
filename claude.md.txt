@@ -4,6 +4,10 @@ canlıya çıkarılacak projenin konumu:
 Backend:C:\inetpub\wwwroot\Balina-api
 frontend:C:\inetpub\wwwroot\Balina-front
 
+portlar:
+front: balina.testprocess.com.tr  http://localhost:8085
+api: balinaapi.testprocess.com.tr http://localhost:8086
+
 repository secrets da telegram chat bilgilerim duruyor.
 TELEGRAM_BOT_TOKEN
 TELEGRAM_CHAT_ID

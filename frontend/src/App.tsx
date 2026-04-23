@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Transfer, Notification } from './types';
 import { requestNotificationPermission, onForegroundMessage } from './services/firebase';
-import { registerToken, getRecentTransfers } from './services/api';
+import { registerToken, getRecentTransfers, checkHealth } from './services/api';
 import TransferCard from './components/TransferCard';
 import TelegramJoin from './components/TelegramJoin';
 import NotificationBell from './components/NotificationBell';
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [fcmStatus, setFcmStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
   const [loading, setLoading] = useState(true);
   const [liveCount, setLiveCount] = useState(0);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
 
   const loadTransfers = useCallback(async () => {
     const data = await getRecentTransfers(20);
@@ -79,6 +80,13 @@ const App: React.FC = () => {
 
   useEffect(() => { setupFCM(); }, [setupFCM]);
 
+  useEffect(() => {
+    const ping = async () => setBackendOnline(await checkHealth());
+    ping();
+    const interval = setInterval(ping, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="app">
 
@@ -96,6 +104,9 @@ const App: React.FC = () => {
         </div>
         <div className="header-right">
           <div className="fcm-status">
+            {backendOnline === true  && <span className="status-dot green"  title="Backend çalışıyor">● API</span>}
+            {backendOnline === false && <span className="status-dot red"    title="Backend çevrimdışı">● API</span>}
+            {backendOnline === null  && <span className="status-dot yellow" title="Backend kontrol ediliyor">● API</span>}
             {fcmStatus === 'granted'   && <span className="status-dot green"  title="Bildirimler aktif">●</span>}
             {fcmStatus === 'denied'    && <span className="status-dot red"    title="Bildirim izni verilmedi">●</span>}
             {fcmStatus === 'requesting'&& <span className="status-dot yellow" title="İzin bekleniyor">●</span>}
@@ -119,8 +130,6 @@ const App: React.FC = () => {
             <span className="stat-label">USDT Eşiği</span>
           </div>
         </div>
-
-        <TransferChart transfers={transfers} />
 
         <TelegramJoin />
 
