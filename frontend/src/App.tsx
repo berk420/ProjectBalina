@@ -5,6 +5,8 @@ import { registerToken, getRecentTransfers } from './services/api';
 import TransferCard from './components/TransferCard';
 import TelegramJoin from './components/TelegramJoin';
 import NotificationBell from './components/NotificationBell';
+import LiveTicker from './components/LiveTicker';
+import TransferChart from './components/TransferChart';
 import './App.css';
 
 const App: React.FC = () => {
@@ -25,19 +27,12 @@ const App: React.FC = () => {
       setFcmStatus('denied');
       return;
     }
-
     setFcmStatus('requesting');
-
     const token = await requestNotificationPermission();
-    if (!token) {
-      setFcmStatus('denied');
-      return;
-    }
-
+    if (!token) { setFcmStatus('denied'); return; }
     setFcmStatus('granted');
     await registerToken(token);
 
-    // Listen for foreground messages
     onForegroundMessage((payload: any) => {
       const notif: Notification = {
         id: Date.now().toString(),
@@ -47,11 +42,9 @@ const App: React.FC = () => {
         timestamp: Date.now(),
         read: false,
       };
-
       setNotifications((prev) => [notif, ...prev.slice(0, 49)]);
       setLiveCount((c) => c + 1);
 
-      // Add to transfers if data available
       if (payload.data?.txHash) {
         const t: Transfer = {
           id: payload.data.txHash,
@@ -70,20 +63,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     loadTransfers();
-    const interval = setInterval(loadTransfers, 30000);
+    const interval = setInterval(loadTransfers, 8000);
     return () => clearInterval(interval);
   }, [loadTransfers]);
 
-  useEffect(() => {
-    setupFCM();
-  }, [setupFCM]);
-
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
+  useEffect(() => { setupFCM(); }, [setupFCM]);
 
   return (
     <div className="app">
+
+      {/* ── Canlı Ticker ── */}
+      <LiveTicker transfers={transfers} />
+
+      {/* ── Header ── */}
       <header className="app-header">
         <div className="header-left">
           <span className="logo">🐳</span>
@@ -94,11 +86,11 @@ const App: React.FC = () => {
         </div>
         <div className="header-right">
           <div className="fcm-status">
-            {fcmStatus === 'granted' && <span className="status-dot green" title="Bildirimler aktif">●</span>}
-            {fcmStatus === 'denied' && <span className="status-dot red" title="Bildirim izni verilmedi">●</span>}
-            {fcmStatus === 'requesting' && <span className="status-dot yellow" title="İzin bekleniyor">●</span>}
+            {fcmStatus === 'granted'   && <span className="status-dot green"  title="Bildirimler aktif">●</span>}
+            {fcmStatus === 'denied'    && <span className="status-dot red"    title="Bildirim izni verilmedi">●</span>}
+            {fcmStatus === 'requesting'&& <span className="status-dot yellow" title="İzin bekleniyor">●</span>}
           </div>
-          <NotificationBell notifications={notifications} onClear={clearNotifications} />
+          <NotificationBell notifications={notifications} onClear={() => setNotifications([])} />
         </div>
       </header>
 
@@ -117,6 +109,8 @@ const App: React.FC = () => {
             <span className="stat-label">USDT Eşiği</span>
           </div>
         </div>
+
+        <TransferChart transfers={transfers} />
 
         <TelegramJoin />
 
@@ -145,11 +139,8 @@ const App: React.FC = () => {
       <footer className="app-footer">
         <p>
           Ethereum Mainnet • USDT Contract:{' '}
-          <a
-            href="https://etherscan.io/token/0xdAC17F958D2ee523a2206206994597C13D831ec7"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="https://etherscan.io/token/0xdAC17F958D2ee523a2206206994597C13D831ec7"
+             target="_blank" rel="noopener noreferrer">
             0xdAC17F...ec7
           </a>
         </p>
