@@ -11,6 +11,7 @@ import './App.css';
 
 const App: React.FC = () => {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [fcmStatus, setFcmStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
   const [loading, setLoading] = useState(true);
@@ -18,7 +19,16 @@ const App: React.FC = () => {
 
   const loadTransfers = useCallback(async () => {
     const data = await getRecentTransfers(20);
-    setTransfers(data);
+    setTransfers(prev => {
+      const prevIds = new Set(prev.map(t => t.id));
+      const incoming = data.filter((t: Transfer) => !prevIds.has(t.id));
+      if (incoming.length > 0) {
+        const ids = new Set<string>(incoming.map((t: Transfer) => t.id));
+        setNewIds(ids);
+        setTimeout(() => setNewIds(new Set()), 3000);
+      }
+      return data;
+    });
     setLoading(false);
   }, []);
 
@@ -129,7 +139,7 @@ const App: React.FC = () => {
           ) : (
             <div className="transfers-grid">
               {transfers.map((t) => (
-                <TransferCard key={t.id} transfer={t} />
+                <TransferCard key={t.id} transfer={t} isNew={newIds.has(t.id)} />
               ))}
             </div>
           )}

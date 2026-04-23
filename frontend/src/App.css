@@ -352,64 +352,187 @@ body {
   transition: border-color 0.2s, transform 0.1s;
 }
 
-.transfer-card:hover {
-  border-color: #2a4a7a;
-  transform: translateY(-1px);
+/* ── TRANSFER CARD ───────────────────────────────────────── */
+.transfer-card {
+  background: #0d1526;
+  border: 1px solid #1e2a40;
+  border-radius: 14px;
+  padding: 18px;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
 }
 
-.transfer-header {
+.transfer-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1e3a5a, #4fc3f7, #1e3a5a);
+}
+
+.transfer-card:hover {
+  border-color: #2a4a7a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* Boyut sınıfları */
+.transfer-card.tc-large::before  { background: linear-gradient(90deg, #1a4a1a, #4caf50, #1a4a1a); }
+.transfer-card.tc-large  { border-color: #1a4a1a; }
+
+.transfer-card.tc-huge::before   { background: linear-gradient(90deg, #4a3a00, #ffc107, #4a3a00); }
+.transfer-card.tc-huge  { border-color: #4a3a00; }
+
+.transfer-card.tc-mega::before   { background: linear-gradient(90deg, #4a0000, #f44336, #4a0000); }
+.transfer-card.tc-mega  { border-color: #4a1a1a; box-shadow: 0 0 24px rgba(244,67,54,0.15); }
+
+/* Flash animasyonu */
+@keyframes tcFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(79,195,247,0.6); }
+  50%  { box-shadow: 0 0 0 12px rgba(79,195,247,0); }
+  100% { box-shadow: 0 0 0 0 rgba(79,195,247,0); }
+}
+.transfer-card.tc-flash { animation: tcFlash 1.2s ease; }
+
+/* Üst kısım */
+.tc-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.tc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tc-emoji { font-size: 2rem; line-height: 1; }
+
+.tc-amount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #4fc3f7;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tc-large  .tc-amount { color: #4caf50; }
+.tc-huge   .tc-amount { color: #ffc107; }
+.tc-mega   .tc-amount { color: #f44336; }
+
+.tc-currency {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4a5a7a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.tc-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.tc-new-badge {
+  background: #f44336;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  animation: pulse 1s ease-in-out 3;
+}
+
+.tc-time {
+  font-size: 0.75rem;
+  color: #4a5a7a;
+}
+
+.tc-etherscan {
+  color: #4fc3f7;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 700;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.tc-etherscan:hover { opacity: 1; }
+
+/* Akış */
+.tc-flow {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
-.whale-icon {
-  font-size: 1.3rem;
-}
-
-.transfer-amount {
+.tc-addr-block {
   flex: 1;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #4fc3f7;
-}
-
-.transfer-time {
-  font-size: 0.75rem;
-  color: #7a8fb5;
-}
-
-.transfer-details {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  min-width: 0;
 }
 
-.address-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.82rem;
+.tc-addr-label {
+  font-size: 0.62rem;
+  color: #3a4a6a;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-.label {
-  color: #7a8fb5;
-  min-width: 70px;
-}
-
-.address,
-.tx-hash {
+.tc-addr {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
   color: #81d4fa;
   text-decoration: none;
-  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tc-addr:hover { color: #4fc3f7; text-decoration: underline; }
+
+.tc-arrow {
+  color: #2a4a6a;
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
-.address:hover,
-.tx-hash:hover {
-  text-decoration: underline;
-  color: #4fc3f7;
+/* TX */
+.tc-tx {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.tc-tx-label {
+  font-size: 0.62rem;
+  color: #3a4a6a;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.tc-tx-hash {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: #4a6a8a;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tc-tx-hash:hover { color: #4fc3f7; }
 
 /* Notification Bell */
 .notification-bell {

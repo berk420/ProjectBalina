@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Transfer } from '../types';
 
 interface Props {
   transfer: Transfer;
+  isNew?: boolean;
 }
 
 function shortAddr(addr: string) {
@@ -12,54 +13,91 @@ function shortAddr(addr: string) {
 function timeAgo(timestamp: number) {
   const diff = Math.floor((Date.now() - timestamp) / 1000);
   if (diff < 60) return `${diff}s önce`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m önce`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h önce`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}dk önce`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}sa önce`;
   return new Date(timestamp).toLocaleDateString('tr-TR');
 }
 
-const TransferCard: React.FC<Props> = ({ transfer }) => {
+function sizeClass(amountFormatted: string): string {
+  const num = parseFloat(amountFormatted.replace(/,/g, ''));
+  if (num >= 500_000_000) return 'tc-mega';
+  if (num >= 100_000_000) return 'tc-huge';
+  if (num >= 50_000_000)  return 'tc-large';
+  return 'tc-normal';
+}
+
+function whaleEmoji(amountFormatted: string): string {
+  const num = parseFloat(amountFormatted.replace(/,/g, ''));
+  if (num >= 500_000_000) return '🚨';
+  if (num >= 100_000_000) return '🐋';
+  if (num >= 50_000_000)  return '🐳';
+  return '🐳';
+}
+
+const TransferCard: React.FC<Props> = ({ transfer, isNew }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isNew && ref.current) {
+      ref.current.classList.add('tc-flash');
+      setTimeout(() => ref.current?.classList.remove('tc-flash'), 1200);
+    }
+  }, [isNew]);
+
+  const size = sizeClass(transfer.amountFormatted);
+
   return (
-    <div className="transfer-card">
-      <div className="transfer-header">
-        <span className="whale-icon">🐳</span>
-        <span className="transfer-amount">{transfer.amountFormatted} USDT</span>
-        <span className="transfer-time">{timeAgo(transfer.timestamp)}</span>
-      </div>
-      <div className="transfer-details">
-        <div className="address-row">
-          <span className="label">Gönderen</span>
-          <a
-            href={`https://etherscan.io/address/${transfer.from}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="address"
-          >
-            {shortAddr(transfer.from)}
-          </a>
+    <div ref={ref} className={`transfer-card ${size}`}>
+
+      {/* Üst band — miktar */}
+      <div className="tc-top">
+        <div className="tc-left">
+          <span className="tc-emoji">{whaleEmoji(transfer.amountFormatted)}</span>
+          <div>
+            <div className="tc-amount">{transfer.amountFormatted}</div>
+            <div className="tc-currency">USDT</div>
+          </div>
         </div>
-        <div className="address-row">
-          <span className="label">Alıcı</span>
-          <a
-            href={`https://etherscan.io/address/${transfer.to}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="address"
-          >
-            {shortAddr(transfer.to)}
-          </a>
-        </div>
-        <div className="address-row">
-          <span className="label">TX Hash</span>
+        <div className="tc-right">
+          {isNew && <span className="tc-new-badge">YENİ</span>}
+          <span className="tc-time">{timeAgo(transfer.timestamp)}</span>
           <a
             href={`https://etherscan.io/tx/${transfer.txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="tx-hash"
+            className="tc-etherscan"
+            title="Etherscan'da Gör"
           >
-            {shortAddr(transfer.txHash)}
+            ↗
           </a>
         </div>
       </div>
+
+      {/* Akış: gönderen → alıcı */}
+      <div className="tc-flow">
+        <div className="tc-addr-block">
+          <span className="tc-addr-label">GÖNDEREN</span>
+          <a href={`https://etherscan.io/address/${transfer.from}`} target="_blank" rel="noopener noreferrer" className="tc-addr">
+            {shortAddr(transfer.from)}
+          </a>
+        </div>
+        <div className="tc-arrow">→</div>
+        <div className="tc-addr-block">
+          <span className="tc-addr-label">ALICI</span>
+          <a href={`https://etherscan.io/address/${transfer.to}`} target="_blank" rel="noopener noreferrer" className="tc-addr">
+            {shortAddr(transfer.to)}
+          </a>
+        </div>
+      </div>
+
+      {/* TX */}
+      <div className="tc-tx">
+        <span className="tc-tx-label">TX</span>
+        <a href={`https://etherscan.io/tx/${transfer.txHash}`} target="_blank" rel="noopener noreferrer" className="tc-tx-hash">
+          {transfer.txHash && transfer.txHash !== 'unknown' ? transfer.txHash.slice(0, 20) + '...' : '—'}
+        </a>
+      </div>
+
     </div>
   );
 };
