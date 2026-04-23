@@ -11,8 +11,17 @@ async function bootstrap() {
     res.setHeader('Cache-Control', 'no-store');
     next();
   });
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:8085',
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin: any, cb: any) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error('CORS: ' + origin + ' not allowed'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
