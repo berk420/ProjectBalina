@@ -1,7 +1,8 @@
-# Environment variables
+# Environment variables & secrets
 env/
 .env
 .env.*
+backend/firebase-adminsdk.json
 
 # Dependencies
 node_modules/
@@ -26,13 +27,8 @@ Thumbs.db
 *.suo
 *.user
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
+# TypeScript incremental
+*.tsbuildinfo
 
 # Temp files
 *.tmp

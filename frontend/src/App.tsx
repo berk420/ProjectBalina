@@ -1,0 +1,161 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { Transfer, Notification } from './types';
+import { requestNotificationPermission, onForegroundMessage } from './services/firebase';
+import { registerToken, getRecentTransfers } from './services/api';
+import TransferCard from './components/TransferCard';
+import TelegramJoin from './components/TelegramJoin';
+import NotificationBell from './components/NotificationBell';
+import './App.css';
+
+const App: React.FC = () => {
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [fcmStatus, setFcmStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
+  const [loading, setLoading] = useState(true);
+  const [liveCount, setLiveCount] = useState(0);
+
+  const loadTransfers = useCallback(async () => {
+    const data = await getRecentTransfers(20);
+    setTransfers(data);
+    setLoading(false);
+  }, []);
+
+  const setupFCM = useCallback(async () => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      setFcmStatus('denied');
+      return;
+    }
+
+    setFcmStatus('requesting');
+
+    const token = await requestNotificationPermission();
+    if (!token) {
+      setFcmStatus('denied');
+      return;
+    }
+
+    setFcmStatus('granted');
+    await registerToken(token);
+
+    // Listen for foreground messages
+    onForegroundMessage((payload: any) => {
+      const notif: Notification = {
+        id: Date.now().toString(),
+        title: payload.notification?.title || '🐳 Yeni Transfer',
+        body: payload.notification?.body || '',
+        data: payload.data,
+        timestamp: Date.now(),
+        read: false,
+      };
+
+      setNotifications((prev) => [notif, ...prev.slice(0, 49)]);
+      setLiveCount((c) => c + 1);
+
+      // Add to transfers if data available
+      if (payload.data?.txHash) {
+        const t: Transfer = {
+          id: payload.data.txHash,
+          from: payload.data.from,
+          to: payload.data.to,
+          amount: payload.data.amount,
+          amountFormatted: payload.data.amountFormatted,
+          txHash: payload.data.txHash,
+          blockNumber: parseInt(payload.data.blockNumber || '0'),
+          timestamp: parseInt(payload.data.timestamp || Date.now().toString()),
+        };
+        setTransfers((prev) => [t, ...prev.slice(0, 19)]);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    loadTransfers();
+    const interval = setInterval(loadTransfers, 30000);
+    return () => clearInterval(interval);
+  }, [loadTransfers]);
+
+  useEffect(() => {
+    setupFCM();
+  }, [setupFCM]);
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  return (
+    <div className="app">
+      <header className="app-header">
+        <div className="header-left">
+          <span className="logo">🐳</span>
+          <div>
+            <h1>Balina Takip</h1>
+            <p className="subtitle">USDT Büyük Transfer Bildirimleri</p>
+          </div>
+        </div>
+        <div className="header-right">
+          <div className="fcm-status">
+            {fcmStatus === 'granted' && <span className="status-dot green" title="Bildirimler aktif">●</span>}
+            {fcmStatus === 'denied' && <span className="status-dot red" title="Bildirim izni verilmedi">●</span>}
+            {fcmStatus === 'requesting' && <span className="status-dot yellow" title="İzin bekleniyor">●</span>}
+          </div>
+          <NotificationBell notifications={notifications} onClear={clearNotifications} />
+        </div>
+      </header>
+
+      <main className="app-main">
+        <div className="stats-bar">
+          <div className="stat">
+            <span className="stat-value">{transfers.length}</span>
+            <span className="stat-label">Tespit Edilen</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{liveCount}</span>
+            <span className="stat-label">Canlı Bildirim</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">≥100K</span>
+            <span className="stat-label">USDT Eşiği</span>
+          </div>
+        </div>
+
+        <TelegramJoin />
+
+        <div className="transfers-section">
+          <h2>Son Büyük Transferler</h2>
+          {loading ? (
+            <div className="loading">
+              <div className="spinner" />
+              <p>Transferler yükleniyor...</p>
+            </div>
+          ) : transfers.length === 0 ? (
+            <div className="empty-state">
+              <p>🔍 Henüz 100.000 USDT üzerinde transfer tespit edilmedi.</p>
+              <p>Ethereum mainnet dinleniyor...</p>
+            </div>
+          ) : (
+            <div className="transfers-grid">
+              {transfers.map((t) => (
+                <TransferCard key={t.id} transfer={t} />
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      <footer className="app-footer">
+        <p>
+          Ethereum Mainnet • USDT Contract:{' '}
+          <a
+            href="https://etherscan.io/token/0xdAC17F958D2ee523a2206206994597C13D831ec7"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            0xdAC17F...ec7
+          </a>
+        </p>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
