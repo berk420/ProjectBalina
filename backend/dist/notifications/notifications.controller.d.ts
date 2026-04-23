@@ -21,4 +21,13 @@ export declare class NotificationsController {
         status: string;
         timestamp: string;
     };
+    getConfig(): {
+        apiKey: string;
+        authDomain: string;
+        projectId: string;
+        storageBucket: string;
+        messagingSenderId: string;
+        appId: string;
+        vapidKey: string;
+    };
 }

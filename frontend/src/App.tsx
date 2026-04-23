@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Transfer, Notification } from './types';
-import { requestNotificationPermission, onForegroundMessage } from './services/firebase';
+import { initFirebase, requestNotificationPermission, onForegroundMessage } from './services/firebase';
 import { registerToken, getRecentTransfers, checkHealth } from './services/api';
 import TransferCard from './components/TransferCard';
 import TelegramJoin from './components/TelegramJoin';
@@ -39,6 +39,7 @@ const App: React.FC = () => {
       return;
     }
     setFcmStatus('requesting');
+    await initFirebase();
     const token = await requestNotificationPermission();
     if (!token) { setFcmStatus('denied'); return; }
     setFcmStatus('granted');
