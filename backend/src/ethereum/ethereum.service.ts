@@ -18,6 +18,7 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
   private provider: ethers.WebSocketProvider | ethers.JsonRpcProvider;
   private contract: ethers.Contract;
   private reconnectTimer: NodeJS.Timeout;
+  private readonly processedTxHashes = new Set<string>();
 
   constructor(
     private readonly firebaseService: FirebaseService,
@@ -81,6 +82,15 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
       const log = event?.log || event;
       const txHash: string = log?.transactionHash || log?.hash || 'unknown';
       const blockNumber: number = log?.blockNumber || 0;
+
+      // Duplicate olayları engelle
+      const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
+      if (this.processedTxHashes.has(dedupKey)) return;
+      this.processedTxHashes.add(dedupKey);
+      if (this.processedTxHashes.size > 500) {
+        const first = this.processedTxHashes.values().next().value;
+        this.processedTxHashes.delete(first);
+      }
 
       this.logger.log(`🐳 Whale transfer: ${amountFormatted} USDT | TX: ${txHash}`);
 
