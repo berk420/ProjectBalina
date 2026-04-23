@@ -1,0 +1,41 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write backend .env with secrets
+        run: |
+          @"
+          PORT=8086
+          ALCHEMY_URL=https://eth-mainnet.g.alchemy.com/v2/eZGJ84D6QKSownYQZdKHh
+          USDT_CONTRACT=0xdAC17F958D2ee523a2206206994597C13D831ec7
+          USDT_THRESHOLD=100000
+          FIREBASE_PROJECT_ID=balina-d69d2
+          FIREBASE_ADMIN_SDK_PATH=./firebase-adminsdk.json
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID_GROUP=${{ secrets.TELEGRAM_CHAT_ID_GROUP }}
+          FRONTEND_URL=http://95.65.174.216:8085
+          "@ | Out-File "C:\inetpub\wwwroot\Balina-api\.env" -Encoding utf8
+
+      - name: Restart backend with new env
+        run: pm2 restart balina-api --update-env
+
+      - name: Deploy frontend build
+        run: |
+          robocopy "${{ github.workspace }}\frontend\build" "C:\inetpub\wwwroot\Balina-front\build" /E /PURGE
+          Copy-Item "${{ github.workspace }}\icon.png" "C:\inetpub\wwwroot\Balina-front\build\icon.png" -Force
+
+      - name: Deploy backend dist
+        run: |
+          robocopy "${{ github.workspace }}\backend\dist" "C:\inetpub\wwwroot\Balina-api\dist" /E /PURGE
