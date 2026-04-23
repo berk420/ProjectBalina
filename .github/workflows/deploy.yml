@@ -13,29 +13,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Write backend .env with secrets
-        run: |
-          @"
-          PORT=8086
-          ALCHEMY_URL=https://eth-mainnet.g.alchemy.com/v2/eZGJ84D6QKSownYQZdKHh
-          USDT_CONTRACT=0xdAC17F958D2ee523a2206206994597C13D831ec7
-          USDT_THRESHOLD=100000
-          FIREBASE_PROJECT_ID=balina-d69d2
-          FIREBASE_ADMIN_SDK_PATH=./firebase-adminsdk.json
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_CHAT_ID_GROUP=${{ secrets.TELEGRAM_CHAT_ID_GROUP }}
-          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          FIREBASE_CLIENT_API_KEY=${{ secrets.FIREBASE_CLIENT_API_KEY }}
-          FIREBASE_CLIENT_AUTH_DOMAIN=${{ secrets.FIREBASE_CLIENT_AUTH_DOMAIN }}
-          FIREBASE_CLIENT_STORAGE_BUCKET=${{ secrets.FIREBASE_CLIENT_STORAGE_BUCKET }}
-          FIREBASE_CLIENT_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_CLIENT_MESSAGING_SENDER_ID }}
-          FIREBASE_CLIENT_APP_ID=${{ secrets.FIREBASE_CLIENT_APP_ID }}
-          FIREBASE_CLIENT_VAPID_KEY=${{ secrets.FIREBASE_CLIENT_VAPID_KEY }}
-          "@ | Out-File "C:\inetpub\wwwroot\Balina-api\.env" -Encoding utf8
-
-      - name: Restart backend with new env
-        run: pm2 restart balina-api --update-env
+      - name: Restart backend
+        run: pm2 restart balina-api
 
       - name: Deploy frontend build
         run: |
