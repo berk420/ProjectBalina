@@ -1,10 +1,22 @@
 projenin api keyleri ve firebase js tarafındaki bilgiler env dosyasının altında.
 
 canlıya çıkarılacak projenin konumu:
-Backend:
-frontend:
+Backend:C:\inetpub\wwwroot\Balina-api
+frontend:C:\inetpub\wwwroot\Balina-front
 
 repository secrets da telegram chat bilgilerim duruyor.
 TELEGRAM_BOT_TOKEN
 TELEGRAM_CHAT_ID
 TELEGRAM_CHAT_ID_GROUP
+
+front end react olacak
+
+Fullstack Developer Task Gereksinimleri Dökümanı içerisindekiler temel alınarak geliştirme yapılacak
+
+📄 Fullstack Developer Task Gereksinimleri Dökümanı dışında yapılacak geliştirmeler.
+
+firebase bildirimi front ende düştüğünde telegram grunbuna da mesaj gönderecek 
+telegram grubuna alıp yapılması için kullanıcının numarasını girip "bildirimler için telegram grubuna katıl" alanı oalcak ve kullanıcı katılacak.
+
+
+başarım kriterlerini tam uygula.

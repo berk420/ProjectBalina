@@ -1,8 +1,6 @@
+# Sadece gizli bilgiler
 node_modules/
-dist/
-logs/
-*.log
 .env
 .env.*
 firebase-adminsdk.json
-iisnode/
+logs/

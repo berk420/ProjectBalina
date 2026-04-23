@@ -1,35 +1,8 @@
-# Environment variables & secrets
+# Gizli bilgiler - kesinlikle commit'e girmemeli
 env/
 .env
 .env.*
 backend/firebase-adminsdk.json
 
-# Dependencies
+# Bağımlılıklar - npm install ile gelir
 node_modules/
-vendor/
-
-# Build outputs
-dist/
-build/
-out/
-
-# Logs
-*.log
-logs/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE / Editor
-.vscode/
-.idea/
-*.suo
-*.user
-
-# TypeScript incremental
-*.tsbuildinfo
-
-# Temp files
-*.tmp
-*.bak
