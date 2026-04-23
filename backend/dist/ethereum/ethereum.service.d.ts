@@ -10,6 +10,7 @@ export declare class EthereumService implements OnModuleInit, OnModuleDestroy {
     private provider;
     private contract;
     private reconnectTimer;
+    private readonly processedTxHashes;
     constructor(firebaseService: FirebaseService, telegramService: TelegramService, transfersService: TransfersService);
     onModuleInit(): void;
     onModuleDestroy(): void;

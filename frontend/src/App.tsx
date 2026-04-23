@@ -105,7 +105,7 @@ const App: React.FC = () => {
             <span className="stat-label">Canlı Bildirim</span>
           </div>
           <div className="stat">
-            <span className="stat-value">≥100K</span>
+            <span className="stat-value">≥10M</span>
             <span className="stat-label">USDT Eşiği</span>
           </div>
         </div>

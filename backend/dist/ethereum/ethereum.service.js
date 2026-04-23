@@ -28,6 +28,7 @@ let EthereumService = EthereumService_1 = class EthereumService {
         this.telegramService = telegramService;
         this.transfersService = transfersService;
         this.logger = new common_1.Logger(EthereumService_1.name);
+        this.processedTxHashes = new Set();
     }
     onModuleInit() {
         this.connect();
@@ -67,6 +68,14 @@ let EthereumService = EthereumService_1 = class EthereumService {
             const log = event?.log || event;
             const txHash = log?.transactionHash || log?.hash || 'unknown';
             const blockNumber = log?.blockNumber || 0;
+            const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
+            if (this.processedTxHashes.has(dedupKey))
+                return;
+            this.processedTxHashes.add(dedupKey);
+            if (this.processedTxHashes.size > 500) {
+                const first = this.processedTxHashes.values().next().value;
+                this.processedTxHashes.delete(first);
+            }
             this.logger.log(`🐳 Whale transfer: ${amountFormatted} USDT | TX: ${txHash}`);
             const transfer = {
                 id: (0, uuid_1.v4)(),

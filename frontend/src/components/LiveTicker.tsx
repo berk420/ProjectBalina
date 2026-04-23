@@ -25,7 +25,7 @@ const LiveTicker: React.FC<Props> = ({ transfers }) => {
     return (
       <div className="ticker-bar ticker-waiting">
         <span className="ticker-label">🔴 CANLI</span>
-        <span className="ticker-idle">Ethereum mainnet dinleniyor… ≥100,000 USDT transfer bekleniyor</span>
+        <span className="ticker-idle">Ethereum mainnet dinleniyor… ≥10,000,000 USDT transfer bekleniyor</span>
       </div>
     );
   }
