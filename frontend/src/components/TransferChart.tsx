@@ -88,19 +88,17 @@ const TransferChart: React.FC<Props> = ({ transfers }) => {
   // Dağılım grafiği — tüm transferler üzerinden
   const bucketData = useMemo(() => {
     const buckets: Record<string, { label: string; count: number; total: number }> = {
-      '10M–20M':  { label: '10M–20M',  count: 0, total: 0 },
-      '20M–50M':  { label: '20M–50M',  count: 0, total: 0 },
-      '50M–100M': { label: '50M–100M', count: 0, total: 0 },
-      '100M–500M':{ label: '100M–500M',count: 0, total: 0 },
-      '500M+':    { label: '500M+',    count: 0, total: 0 },
+      '100M–200M': { label: '100M–200M', count: 0, total: 0 },
+      '200M–500M': { label: '200M–500M', count: 0, total: 0 },
+      '500M–1B':   { label: '500M–1B',   count: 0, total: 0 },
+      '1B+':       { label: '1B+',       count: 0, total: 0 },
     };
     transfers.forEach(t => {
       const amt = parseFloat(t.amount) / 1_000_000;
       const key =
-        amt < 20_000_000  ? '10M–20M'   :
-        amt < 50_000_000  ? '20M–50M'   :
-        amt < 100_000_000 ? '50M–100M'  :
-        amt < 500_000_000 ? '100M–500M' : '500M+';
+        amt < 200_000_000   ? '100M–200M' :
+        amt < 500_000_000   ? '200M–500M' :
+        amt < 1_000_000_000 ? '500M–1B'   : '1B+';
       buckets[key].count++;
       buckets[key].total += amt;
     });
