@@ -60,8 +60,8 @@ const App: React.FC = () => {
       if (payload.data?.txHash) {
         const t: Transfer = {
           id: payload.data.txHash,
-          from: payload.data.from,
-          to: payload.data.to,
+          from: payload.data.senderAddress,
+          to: payload.data.receiverAddress,
           amount: payload.data.amount,
           amountFormatted: payload.data.amountFormatted,
           txHash: payload.data.txHash,
