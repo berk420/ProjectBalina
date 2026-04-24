@@ -8,12 +8,6 @@ API key gerektiren tüm işlemler merkezi sunucu üzerinden yürütülür. Proje
 
 ## 🚀 Kurulum
 
-### Gereksinimler
-- [Node.js](https://nodejs.org/) v18+
-- [PM2](https://pm2.keymetrics.io/) (`npm install -g pm2`)
-- Bir web sunucusu (IIS, Nginx vb.)
-
-### Adımlar
 
 **1. Repoyu klonlayın**
 ```bash
@@ -21,12 +15,7 @@ git clone https://github.com/kullanici/balina.git
 cd balina
 ```
 
-**2. `frontend/.env` dosyasını oluşturun**
-```env
-REACT_APP_API_URL=https://balinaapi.testprocess.com.tr
-```
-
-**3. Başlatın**
+**2. Başlatın**
 
 ```
 start.bat dosyasına çift tıklayın
@@ -67,7 +56,9 @@ start.bat dosyasına çift tıklayın
 
 ## 📸 Ekran Görüntüleri
 
-<!-- Görselleri buraya ekleyin -->
+---
+
+<img width="1168" height="937" alt="image" src="https://github.com/user-attachments/assets/60544fc8-5ab2-48a6-83fa-bac03e7fb988" />
 
 ---
 
