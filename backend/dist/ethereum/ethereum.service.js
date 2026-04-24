@@ -54,6 +54,7 @@ let EthereumService = EthereumService_1 = class EthereumService {
             this.logger.error('Provider error, reconnecting...', err.message);
             this.scheduleReconnect();
         });
+        this.startHeartbeat();
         this.logger.log(`Listening for USDT transfers ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
     }
     async handleTransferEvent(from, to, value, event) {
@@ -89,8 +90,8 @@ let EthereumService = EthereumService_1 = class EthereumService {
             };
             this.transfersService.save(transfer);
             const notifData = {
-                from,
-                to,
+                senderAddress: from,
+                receiverAddress: to,
                 amount: value.toString(),
                 amountFormatted,
                 txHash,
@@ -110,8 +111,21 @@ let EthereumService = EthereumService_1 = class EthereumService {
             this.logger.error('Error handling transfer event', err.message);
         }
     }
+    startHeartbeat() {
+        clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(async () => {
+            try {
+                await this.provider.getBlockNumber();
+            }
+            catch {
+                this.logger.warn('Heartbeat failed, reconnecting...');
+                this.scheduleReconnect();
+            }
+        }, 30_000);
+    }
     scheduleReconnect() {
         clearTimeout(this.reconnectTimer);
+        clearInterval(this.heartbeatTimer);
         this.disconnect();
         this.reconnectTimer = setTimeout(() => {
             this.logger.log('Reconnecting...');

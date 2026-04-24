@@ -1,3 +1,4 @@
+import { OnModuleInit } from '@nestjs/common';
 export interface Transfer {
     id: string;
     from: string;
@@ -8,10 +9,11 @@ export interface Transfer {
     blockNumber: number;
     timestamp: number;
 }
-export declare class TransfersService {
+export declare class TransfersService implements OnModuleInit {
     private transfers;
-    private readonly MAX_TRANSFERS;
+    onModuleInit(): void;
     save(transfer: Transfer): void;
-    findAll(): Transfer[];
     findRecent(limit?: number): Transfer[];
+    findAll(): Transfer[];
+    private persist;
 }

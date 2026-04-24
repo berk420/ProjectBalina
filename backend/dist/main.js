@@ -31,7 +31,7 @@ async function bootstrap() {
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('api/docs', app, document);
-    app.getHttpAdapter().get('/firebase-messaging-sw.js', (req, res) => {
+    app.getHttpAdapter().get('/firebase-messaging-sw.js', (_req, res) => {
         const config = {
             apiKey: process.env.FIREBASE_CLIENT_API_KEY ?? '',
             authDomain: process.env.FIREBASE_CLIENT_AUTH_DOMAIN ?? '',

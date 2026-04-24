@@ -18,6 +18,7 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
   private provider: ethers.WebSocketProvider | ethers.JsonRpcProvider;
   private contract: ethers.Contract;
   private reconnectTimer: NodeJS.Timeout;
+  private heartbeatTimer: NodeJS.Timeout;
   private readonly processedTxHashes = new Set<string>();
 
   constructor(
@@ -57,6 +58,7 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
       this.scheduleReconnect();
     });
 
+    this.startHeartbeat();
     this.logger.log(`Listening for USDT transfers ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
   }
 
@@ -108,8 +110,8 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
       this.transfersService.save(transfer);
 
       const notifData: Record<string, string> = {
-        from,
-        to,
+        senderAddress: from,
+        receiverAddress: to,
         amount: value.toString(),
         amountFormatted,
         txHash,
@@ -134,8 +136,21 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private startHeartbeat() {
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(async () => {
+      try {
+        await this.provider.getBlockNumber();
+      } catch {
+        this.logger.warn('Heartbeat failed, reconnecting...');
+        this.scheduleReconnect();
+      }
+    }, 30_000);
+  }
+
   private scheduleReconnect() {
     clearTimeout(this.reconnectTimer);
+    clearInterval(this.heartbeatTimer);
     this.disconnect();
     this.reconnectTimer = setTimeout(() => {
       this.logger.log('Reconnecting...');
