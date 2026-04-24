@@ -23,6 +23,15 @@ export async function registerToken(token: string): Promise<boolean> {
   }
 }
 
+export async function unregisterToken(token: string): Promise<boolean> {
+  try {
+    await api.delete('/api/unregister-token', { data: { token } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getRecentTransfers(limit = 20) {
   try {
     const resp = await api.get(`/api/transfers?limit=${limit}`);

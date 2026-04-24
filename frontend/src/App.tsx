@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Transfer, Notification } from './types';
 import { initFirebase, requestNotificationPermission, onForegroundMessage } from './services/firebase';
-import { registerToken, getRecentTransfers, checkHealth } from './services/api';
+import { registerToken, unregisterToken, getRecentTransfers, checkHealth } from './services/api';
 import TransferCard from './components/TransferCard';
 import TelegramJoin from './components/TelegramJoin';
 import NotificationBell from './components/NotificationBell';
@@ -14,6 +14,10 @@ const App: React.FC = () => {
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [fcmStatus, setFcmStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(
+    () => localStorage.getItem('notifEnabled') !== 'false'
+  );
   const [loading, setLoading] = useState(true);
   const [liveCount, setLiveCount] = useState(0);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
@@ -43,7 +47,8 @@ const App: React.FC = () => {
     const token = await requestNotificationPermission();
     if (!token) { setFcmStatus('denied'); return; }
     setFcmStatus('granted');
-    await registerToken(token);
+    setFcmToken(token);
+    if (notifEnabled) await registerToken(token);
 
     onForegroundMessage((payload: any) => {
       const notif: Notification = {
@@ -81,6 +86,18 @@ const App: React.FC = () => {
 
   useEffect(() => { setupFCM(); }, [setupFCM]);
 
+  const toggleNotifications = useCallback(async () => {
+    const next = !notifEnabled;
+    setNotifEnabled(next);
+    localStorage.setItem('notifEnabled', String(next));
+    if (!fcmToken) return;
+    if (next) {
+      await registerToken(fcmToken);
+    } else {
+      await unregisterToken(fcmToken);
+    }
+  }, [notifEnabled, fcmToken]);
+
   useEffect(() => {
     const ping = async () => setBackendOnline(await checkHealth());
     ping();
@@ -112,6 +129,24 @@ const App: React.FC = () => {
             {fcmStatus === 'denied'    && <span className="status-dot red"    title="Bildirim izni verilmedi">●</span>}
             {fcmStatus === 'requesting'&& <span className="status-dot yellow" title="İzin bekleniyor">●</span>}
           </div>
+          {fcmStatus === 'granted' && (
+            <button
+              onClick={toggleNotifications}
+              title={notifEnabled ? 'Masaüstü bildirimlerini kapat' : 'Masaüstü bildirimlerini aç'}
+              style={{
+                background: notifEnabled ? '#ef4444' : '#22c55e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                marginRight: '8px',
+              }}
+            >
+              {notifEnabled ? '🔕 Bildirimleri Kapat' : '🔔 Bildirimleri Aç'}
+            </button>
+          )}
           <NotificationBell notifications={notifications} onClear={() => setNotifications([])} />
         </div>
       </header>
