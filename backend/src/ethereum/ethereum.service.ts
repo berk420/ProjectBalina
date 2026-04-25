@@ -11,14 +11,15 @@ const USDT_ABI = [
 
 const USDT_DECIMALS = 6;
 const FCM_TOPIC = 'whale-alerts';
+const POLL_INTERVAL_MS = 60_000;
 
 @Injectable()
 export class EthereumService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EthereumService.name);
-  private provider: ethers.WebSocketProvider | ethers.JsonRpcProvider;
-  private contract: ethers.Contract;
-  private reconnectTimer: NodeJS.Timeout;
-  private heartbeatTimer: NodeJS.Timeout;
+  private provider: ethers.JsonRpcProvider;
+  private iface: ethers.Interface;
+  private pollTimer: NodeJS.Timeout;
+  private lastBlock = 0;
   private readonly processedTxHashes = new Set<string>();
 
   constructor(
@@ -28,141 +29,116 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    this.connect();
+    const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
+    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.iface = new ethers.Interface(USDT_ABI);
+    this.logger.log(`Ethereum mainnet bağlantısı kuruldu → ${rpcUrl}`);
+    this.logger.log(`USDT Transfer event'leri dinleniyor ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
+    this.poll();
+    this.pollTimer = setInterval(() => this.poll(), POLL_INTERVAL_MS);
   }
 
   onModuleDestroy() {
-    this.disconnect();
+    clearInterval(this.pollTimer);
+    this.provider.destroy();
   }
 
-  private connect() {
-    const alchemyUrl = process.env.ALCHEMY_URL || '';
+  private async poll() {
     const contractAddress = process.env.USDT_CONTRACT || '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+    const threshold = BigInt(
+      (parseFloat(process.env.USDT_THRESHOLD || '100000') * Math.pow(10, USDT_DECIMALS)).toFixed(0),
+    );
 
     try {
-      // Use WebSocket if available, fallback to HTTP polling
-      const wsUrl = alchemyUrl.replace('https://', 'wss://');
-      this.provider = new ethers.WebSocketProvider(wsUrl);
-      this.logger.log('Connected via WebSocket');
-    } catch {
-      this.provider = new ethers.JsonRpcProvider(alchemyUrl);
-      this.logger.log('Connected via HTTP RPC');
+      const latestBlock = await this.provider.getBlockNumber();
+
+      if (this.lastBlock === 0) {
+        this.lastBlock = latestBlock - 5;
+      }
+
+      if (this.lastBlock >= latestBlock) return;
+
+      const logs = await this.provider.getLogs({
+        address: contractAddress,
+        topics: [ethers.id('Transfer(address,address,uint256)')],
+        fromBlock: this.lastBlock + 1,
+        toBlock: latestBlock,
+      });
+
+      this.lastBlock = latestBlock;
+
+      for (const log of logs) {
+        const parsed = this.iface.parseLog(log);
+        if (!parsed) continue;
+
+        const from: string = parsed.args[0];
+        const to: string = parsed.args[1];
+        const value: bigint = parsed.args[2];
+
+        if (value < threshold) continue;
+
+        await this.handleTransferEvent(from, to, value, log);
+      }
+    } catch (err) {
+      this.logger.error('Transfer event poll hatası', err.message);
     }
-
-    this.contract = new ethers.Contract(contractAddress, USDT_ABI, this.provider);
-
-    this.contract.on('Transfer', this.handleTransferEvent.bind(this));
-
-    this.provider.on('error', (err) => {
-      this.logger.error('Provider error, reconnecting...', err.message);
-      this.scheduleReconnect();
-    });
-
-    this.startHeartbeat();
-    this.logger.log(`Listening for USDT transfers ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
   }
 
   private async handleTransferEvent(
     from: string,
     to: string,
     value: bigint,
-    event: any,
+    log: ethers.Log,
   ) {
-    try {
-      const threshold = BigInt(
-        (parseFloat(process.env.USDT_THRESHOLD || '100000') * Math.pow(10, USDT_DECIMALS)).toFixed(0),
-      );
+    const txHash = log.transactionHash;
+    const blockNumber = log.blockNumber;
 
-      if (value < threshold) return;
+    const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
+    if (this.processedTxHashes.has(dedupKey)) return;
+    this.processedTxHashes.add(dedupKey);
+    if (this.processedTxHashes.size > 500) {
+      this.processedTxHashes.delete(this.processedTxHashes.values().next().value);
+    }
 
-      const amountFormatted = (Number(value) / Math.pow(10, USDT_DECIMALS)).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+    const amountFormatted = (Number(value) / Math.pow(10, USDT_DECIMALS)).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
-      // ethers v6: event is ContractEventPayload, log is in event.log
-      const log = event?.log || event;
-      const txHash: string = log?.transactionHash || log?.hash || 'unknown';
-      const blockNumber: number = log?.blockNumber || 0;
+    this.logger.log(`🐳 Balina transferi: ${amountFormatted} USDT | TX: ${txHash}`);
 
-      // Duplicate olayları engelle
-      const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
-      if (this.processedTxHashes.has(dedupKey)) return;
-      this.processedTxHashes.add(dedupKey);
-      if (this.processedTxHashes.size > 500) {
-        const first = this.processedTxHashes.values().next().value;
-        this.processedTxHashes.delete(first);
-      }
+    const transfer: Transfer = {
+      id: uuidv4(),
+      from,
+      to,
+      amount: value.toString(),
+      amountFormatted,
+      txHash,
+      blockNumber,
+      timestamp: Date.now(),
+    };
 
-      this.logger.log(`🐳 Whale transfer: ${amountFormatted} USDT | TX: ${txHash}`);
+    this.transfersService.save(transfer);
 
-      const transfer: Transfer = {
-        id: uuidv4(),
-        from,
-        to,
-        amount: value.toString(),
-        amountFormatted,
-        txHash,
-        blockNumber,
-        timestamp: Date.now(),
-      };
+    const notifData: Record<string, string> = {
+      senderAddress: from,
+      receiverAddress: to,
+      amount: value.toString(),
+      amountFormatted,
+      txHash,
+      blockNumber: blockNumber.toString(),
+      timestamp: transfer.timestamp.toString(),
+    };
 
-      this.transfersService.save(transfer);
-
-      const notifData: Record<string, string> = {
-        senderAddress: from,
-        receiverAddress: to,
-        amount: value.toString(),
-        amountFormatted,
-        txHash,
-        blockNumber: blockNumber.toString(),
-        timestamp: transfer.timestamp.toString(),
-      };
-
-      const notification = {
+    await Promise.all([
+      this.firebaseService.sendToTopic(FCM_TOPIC, notifData, {
         title: '🐳 USDT Balina Transferi!',
         body: `${amountFormatted} USDT transfer edildi`,
-      };
-
-      // Send FCM + Telegram in parallel
-      await Promise.all([
-        this.firebaseService.sendToTopic(FCM_TOPIC, notifData, notification),
-        this.telegramService.sendGroupMessage(
-          this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash),
-        ),
-      ]);
-    } catch (err) {
-      this.logger.error('Error handling transfer event', err.message);
-    }
-  }
-
-  private startHeartbeat() {
-    clearInterval(this.heartbeatTimer);
-    this.heartbeatTimer = setInterval(async () => {
-      try {
-        await this.provider.getBlockNumber();
-      } catch {
-        this.logger.warn('Heartbeat failed, reconnecting...');
-        this.scheduleReconnect();
-      }
-    }, 30_000);
-  }
-
-  private scheduleReconnect() {
-    clearTimeout(this.reconnectTimer);
-    clearInterval(this.heartbeatTimer);
-    this.disconnect();
-    this.reconnectTimer = setTimeout(() => {
-      this.logger.log('Reconnecting...');
-      this.connect();
-    }, 5000);
-  }
-
-  private disconnect() {
-    try {
-      if (this.contract) this.contract.removeAllListeners();
-      if (this.provider) this.provider.destroy();
-    } catch {}
+      }),
+      this.telegramService.sendGroupMessage(
+        this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash),
+      ),
+    ]);
   }
 
   getStatus(): { connected: boolean; contractAddress: string; threshold: string } {

@@ -8,18 +8,15 @@ export declare class EthereumService implements OnModuleInit, OnModuleDestroy {
     private readonly transfersService;
     private readonly logger;
     private provider;
-    private contract;
-    private reconnectTimer;
-    private heartbeatTimer;
+    private iface;
+    private pollTimer;
+    private lastBlock;
     private readonly processedTxHashes;
     constructor(firebaseService: FirebaseService, telegramService: TelegramService, transfersService: TransfersService);
     onModuleInit(): void;
     onModuleDestroy(): void;
-    private connect;
+    private poll;
     private handleTransferEvent;
-    private startHeartbeat;
-    private scheduleReconnect;
-    private disconnect;
     getStatus(): {
         connected: boolean;
         contractAddress: string;

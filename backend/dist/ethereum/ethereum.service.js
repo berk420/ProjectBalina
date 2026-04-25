@@ -22,124 +22,104 @@ const USDT_ABI = [
 ];
 const USDT_DECIMALS = 6;
 const FCM_TOPIC = 'whale-alerts';
+const POLL_INTERVAL_MS = 60_000;
 let EthereumService = EthereumService_1 = class EthereumService {
     constructor(firebaseService, telegramService, transfersService) {
         this.firebaseService = firebaseService;
         this.telegramService = telegramService;
         this.transfersService = transfersService;
         this.logger = new common_1.Logger(EthereumService_1.name);
+        this.lastBlock = 0;
         this.processedTxHashes = new Set();
     }
     onModuleInit() {
-        this.connect();
+        const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
+        this.provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
+        this.iface = new ethers_1.ethers.Interface(USDT_ABI);
+        this.logger.log(`Ethereum mainnet bağlantısı kuruldu → ${rpcUrl}`);
+        this.logger.log(`USDT Transfer event'leri dinleniyor ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
+        this.poll();
+        this.pollTimer = setInterval(() => this.poll(), POLL_INTERVAL_MS);
     }
     onModuleDestroy() {
-        this.disconnect();
+        clearInterval(this.pollTimer);
+        this.provider.destroy();
     }
-    connect() {
-        const alchemyUrl = process.env.ALCHEMY_URL || '';
+    async poll() {
         const contractAddress = process.env.USDT_CONTRACT || '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+        const threshold = BigInt((parseFloat(process.env.USDT_THRESHOLD || '100000') * Math.pow(10, USDT_DECIMALS)).toFixed(0));
         try {
-            const wsUrl = alchemyUrl.replace('https://', 'wss://');
-            this.provider = new ethers_1.ethers.WebSocketProvider(wsUrl);
-            this.logger.log('Connected via WebSocket');
-        }
-        catch {
-            this.provider = new ethers_1.ethers.JsonRpcProvider(alchemyUrl);
-            this.logger.log('Connected via HTTP RPC');
-        }
-        this.contract = new ethers_1.ethers.Contract(contractAddress, USDT_ABI, this.provider);
-        this.contract.on('Transfer', this.handleTransferEvent.bind(this));
-        this.provider.on('error', (err) => {
-            this.logger.error('Provider error, reconnecting...', err.message);
-            this.scheduleReconnect();
-        });
-        this.startHeartbeat();
-        this.logger.log(`Listening for USDT transfers ≥ ${process.env.USDT_THRESHOLD || 100000} USDT`);
-    }
-    async handleTransferEvent(from, to, value, event) {
-        try {
-            const threshold = BigInt((parseFloat(process.env.USDT_THRESHOLD || '100000') * Math.pow(10, USDT_DECIMALS)).toFixed(0));
-            if (value < threshold)
-                return;
-            const amountFormatted = (Number(value) / Math.pow(10, USDT_DECIMALS)).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            });
-            const log = event?.log || event;
-            const txHash = log?.transactionHash || log?.hash || 'unknown';
-            const blockNumber = log?.blockNumber || 0;
-            const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
-            if (this.processedTxHashes.has(dedupKey))
-                return;
-            this.processedTxHashes.add(dedupKey);
-            if (this.processedTxHashes.size > 500) {
-                const first = this.processedTxHashes.values().next().value;
-                this.processedTxHashes.delete(first);
+            const latestBlock = await this.provider.getBlockNumber();
+            if (this.lastBlock === 0) {
+                this.lastBlock = latestBlock - 5;
             }
-            this.logger.log(`🐳 Whale transfer: ${amountFormatted} USDT | TX: ${txHash}`);
-            const transfer = {
-                id: (0, uuid_1.v4)(),
-                from,
-                to,
-                amount: value.toString(),
-                amountFormatted,
-                txHash,
-                blockNumber,
-                timestamp: Date.now(),
-            };
-            this.transfersService.save(transfer);
-            const notifData = {
-                senderAddress: from,
-                receiverAddress: to,
-                amount: value.toString(),
-                amountFormatted,
-                txHash,
-                blockNumber: blockNumber.toString(),
-                timestamp: transfer.timestamp.toString(),
-            };
-            const notification = {
-                title: '🐳 USDT Balina Transferi!',
-                body: `${amountFormatted} USDT transfer edildi`,
-            };
-            await Promise.all([
-                this.firebaseService.sendToTopic(FCM_TOPIC, notifData, notification),
-                this.telegramService.sendGroupMessage(this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash)),
-            ]);
+            if (this.lastBlock >= latestBlock)
+                return;
+            const logs = await this.provider.getLogs({
+                address: contractAddress,
+                topics: [ethers_1.ethers.id('Transfer(address,address,uint256)')],
+                fromBlock: this.lastBlock + 1,
+                toBlock: latestBlock,
+            });
+            this.lastBlock = latestBlock;
+            for (const log of logs) {
+                const parsed = this.iface.parseLog(log);
+                if (!parsed)
+                    continue;
+                const from = parsed.args[0];
+                const to = parsed.args[1];
+                const value = parsed.args[2];
+                if (value < threshold)
+                    continue;
+                await this.handleTransferEvent(from, to, value, log);
+            }
         }
         catch (err) {
-            this.logger.error('Error handling transfer event', err.message);
+            this.logger.error('Transfer event poll hatası', err.message);
         }
     }
-    startHeartbeat() {
-        clearInterval(this.heartbeatTimer);
-        this.heartbeatTimer = setInterval(async () => {
-            try {
-                await this.provider.getBlockNumber();
-            }
-            catch {
-                this.logger.warn('Heartbeat failed, reconnecting...');
-                this.scheduleReconnect();
-            }
-        }, 30_000);
-    }
-    scheduleReconnect() {
-        clearTimeout(this.reconnectTimer);
-        clearInterval(this.heartbeatTimer);
-        this.disconnect();
-        this.reconnectTimer = setTimeout(() => {
-            this.logger.log('Reconnecting...');
-            this.connect();
-        }, 5000);
-    }
-    disconnect() {
-        try {
-            if (this.contract)
-                this.contract.removeAllListeners();
-            if (this.provider)
-                this.provider.destroy();
+    async handleTransferEvent(from, to, value, log) {
+        const txHash = log.transactionHash;
+        const blockNumber = log.blockNumber;
+        const dedupKey = `${txHash}-${from}-${to}-${value.toString()}`;
+        if (this.processedTxHashes.has(dedupKey))
+            return;
+        this.processedTxHashes.add(dedupKey);
+        if (this.processedTxHashes.size > 500) {
+            this.processedTxHashes.delete(this.processedTxHashes.values().next().value);
         }
-        catch { }
+        const amountFormatted = (Number(value) / Math.pow(10, USDT_DECIMALS)).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+        this.logger.log(`🐳 Balina transferi: ${amountFormatted} USDT | TX: ${txHash}`);
+        const transfer = {
+            id: (0, uuid_1.v4)(),
+            from,
+            to,
+            amount: value.toString(),
+            amountFormatted,
+            txHash,
+            blockNumber,
+            timestamp: Date.now(),
+        };
+        this.transfersService.save(transfer);
+        const notifData = {
+            senderAddress: from,
+            receiverAddress: to,
+            amount: value.toString(),
+            amountFormatted,
+            txHash,
+            blockNumber: blockNumber.toString(),
+            timestamp: transfer.timestamp.toString(),
+        };
+        await Promise.all([
+            this.firebaseService.sendToTopic(FCM_TOPIC, notifData, {
+                title: '🐳 USDT Balina Transferi!',
+                body: `${amountFormatted} USDT transfer edildi`,
+            }),
+            this.telegramService.sendGroupMessage(this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash)),
+        ]);
     }
     getStatus() {
         return {

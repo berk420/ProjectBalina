@@ -105,6 +105,21 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!fcmToken || !notifEnabled) return;
+    const API_URL = process.env.REACT_APP_API_URL ?? 'https://balinaapi.testprocess.com.tr';
+    const handleUnload = () => {
+      fetch(`${API_URL}/api/unregister-token`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: fcmToken }),
+        keepalive: true,
+      });
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [fcmToken, notifEnabled]);
+
   return (
     <div className="app">
 
@@ -154,15 +169,7 @@ const App: React.FC = () => {
       <main className="app-main">
         <div className="stats-bar">
           <div className="stat">
-            <span className="stat-value">{transfers.length}</span>
-            <span className="stat-label">Tespit Edilen</span>
-          </div>
-          <div className="stat">
-            <span className="stat-value">{liveCount}</span>
-            <span className="stat-label">Canlı Bildirim</span>
-          </div>
-          <div className="stat">
-            <span className="stat-value">≥100M</span>
+            <span className="stat-value">≥100.000</span>
             <span className="stat-label">USDT Eşiği</span>
           </div>
         </div>
