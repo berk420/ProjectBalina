@@ -10,7 +10,6 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const ethereum_module_1 = require("./ethereum/ethereum.module");
-const firebase_module_1 = require("./firebase/firebase.module");
 const telegram_module_1 = require("./telegram/telegram.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const transfers_module_1 = require("./transfers/transfers.module");
@@ -21,7 +20,6 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
-            firebase_module_1.FirebaseModule,
             telegram_module_1.TelegramModule,
             notifications_module_1.NotificationsModule,
             transfers_module_1.TransfersModule,

@@ -13,7 +13,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EthereumService = void 0;
 const common_1 = require("@nestjs/common");
 const ethers_1 = require("ethers");
-const firebase_service_1 = require("../firebase/firebase.service");
 const telegram_service_1 = require("../telegram/telegram.service");
 const transfers_service_1 = require("../transfers/transfers.service");
 const uuid_1 = require("uuid");
@@ -21,11 +20,9 @@ const USDT_ABI = [
     'event Transfer(address indexed from, address indexed to, uint256 value)',
 ];
 const USDT_DECIMALS = 6;
-const FCM_TOPIC = 'whale-alerts';
 const POLL_INTERVAL_MS = 60_000;
 let EthereumService = EthereumService_1 = class EthereumService {
-    constructor(firebaseService, telegramService, transfersService) {
-        this.firebaseService = firebaseService;
+    constructor(telegramService, transfersService) {
         this.telegramService = telegramService;
         this.transfersService = transfersService;
         this.logger = new common_1.Logger(EthereumService_1.name);
@@ -104,22 +101,7 @@ let EthereumService = EthereumService_1 = class EthereumService {
             timestamp: Date.now(),
         };
         this.transfersService.save(transfer);
-        const notifData = {
-            senderAddress: from,
-            receiverAddress: to,
-            amount: value.toString(),
-            amountFormatted,
-            txHash,
-            blockNumber: blockNumber.toString(),
-            timestamp: transfer.timestamp.toString(),
-        };
-        await Promise.all([
-            this.firebaseService.sendToTopic(FCM_TOPIC, notifData, {
-                title: '🐳 USDT Balina Transferi!',
-                body: `${amountFormatted} USDT transfer edildi`,
-            }),
-            this.telegramService.sendGroupMessage(this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash)),
-        ]);
+        await this.telegramService.sendGroupMessage(this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash));
     }
     getStatus() {
         return {
@@ -132,8 +114,7 @@ let EthereumService = EthereumService_1 = class EthereumService {
 exports.EthereumService = EthereumService;
 exports.EthereumService = EthereumService = EthereumService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [firebase_service_1.FirebaseService,
-        telegram_service_1.TelegramService,
+    __metadata("design:paramtypes", [telegram_service_1.TelegramService,
         transfers_service_1.TransfersService])
 ], EthereumService);
 //# sourceMappingURL=ethereum.service.js.map

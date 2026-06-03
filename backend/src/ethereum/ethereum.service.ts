@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ethers } from 'ethers';
-import { FirebaseService } from '../firebase/firebase.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { TransfersService, Transfer } from '../transfers/transfers.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,7 +9,6 @@ const USDT_ABI = [
 ];
 
 const USDT_DECIMALS = 6;
-const FCM_TOPIC = 'whale-alerts';
 const POLL_INTERVAL_MS = 60_000;
 
 @Injectable()
@@ -23,7 +21,6 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
   private readonly processedTxHashes = new Set<string>();
 
   constructor(
-    private readonly firebaseService: FirebaseService,
     private readonly telegramService: TelegramService,
     private readonly transfersService: TransfersService,
   ) {}
@@ -120,25 +117,9 @@ export class EthereumService implements OnModuleInit, OnModuleDestroy {
 
     this.transfersService.save(transfer);
 
-    const notifData: Record<string, string> = {
-      senderAddress: from,
-      receiverAddress: to,
-      amount: value.toString(),
-      amountFormatted,
-      txHash,
-      blockNumber: blockNumber.toString(),
-      timestamp: transfer.timestamp.toString(),
-    };
-
-    await Promise.all([
-      this.firebaseService.sendToTopic(FCM_TOPIC, notifData, {
-        title: '🐳 USDT Balina Transferi!',
-        body: `${amountFormatted} USDT transfer edildi`,
-      }),
-      this.telegramService.sendGroupMessage(
-        this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash),
-      ),
-    ]);
+    await this.telegramService.sendGroupMessage(
+      this.telegramService.formatWhaleAlert(from, to, amountFormatted, txHash),
+    );
   }
 
   getStatus(): { connected: boolean; contractAddress: string; threshold: string } {

@@ -16,19 +16,12 @@ exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const notifications_service_1 = require("./notifications.service");
-const register_token_dto_1 = require("./dto/register-token.dto");
 const join_telegram_dto_1 = require("./dto/join-telegram.dto");
 const transfers_service_1 = require("../transfers/transfers.service");
 let NotificationsController = class NotificationsController {
     constructor(notificationsService, transfersService) {
         this.notificationsService = notificationsService;
         this.transfersService = transfersService;
-    }
-    async registerToken(dto) {
-        return this.notificationsService.registerToken(dto.token);
-    }
-    async unregisterToken(dto) {
-        return this.notificationsService.unregisterToken(dto.token);
     }
     async joinTelegram(dto) {
         return this.notificationsService.getTelegramInviteLink(dto.phoneNumber);
@@ -40,35 +33,8 @@ let NotificationsController = class NotificationsController {
     health() {
         return { status: 'ok', timestamp: new Date().toISOString() };
     }
-    getConfig() {
-        return {
-            apiKey: process.env.FIREBASE_CLIENT_API_KEY,
-            authDomain: process.env.FIREBASE_CLIENT_AUTH_DOMAIN,
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            storageBucket: process.env.FIREBASE_CLIENT_STORAGE_BUCKET,
-            messagingSenderId: process.env.FIREBASE_CLIENT_MESSAGING_SENDER_ID,
-            appId: process.env.FIREBASE_CLIENT_APP_ID,
-            vapidKey: process.env.FIREBASE_CLIENT_VAPID_KEY,
-        };
-    }
 };
 exports.NotificationsController = NotificationsController;
-__decorate([
-    (0, common_1.Post)('register-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Register FCM device token for whale alerts' }),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_token_dto_1.RegisterTokenDto]),
-    __metadata("design:returntype", Promise)
-], NotificationsController.prototype, "registerToken", null);
-__decorate([
-    (0, common_1.Delete)('unregister-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Unregister FCM device token' }),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_token_dto_1.RegisterTokenDto]),
-    __metadata("design:returntype", Promise)
-], NotificationsController.prototype, "unregisterToken", null);
 __decorate([
     (0, common_1.Post)('join-telegram'),
     (0, swagger_1.ApiOperation)({ summary: 'Get Telegram group invite link' }),
@@ -92,13 +58,6 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "health", null);
-__decorate([
-    (0, common_1.Get)('config'),
-    (0, swagger_1.ApiOperation)({ summary: 'Firebase client config for frontend' }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], NotificationsController.prototype, "getConfig", null);
 exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('notifications'),
     (0, common_1.Controller)('api'),

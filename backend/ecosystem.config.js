@@ -8,7 +8,9 @@
     watch: false,
     max_memory_restart: '500M',
     env: {
-      NODE_ENV: 'production'
+      NODE_ENV: 'production',
+      PORT: 8086,
+      FRONTEND_URL: 'https://balina.testprocess.com.tr'
     },
     error_file: 'C:/inetpub/wwwroot/Balina-api/logs/error.log',
     out_file: 'C:/inetpub/wwwroot/Balina-api/logs/out.log',
