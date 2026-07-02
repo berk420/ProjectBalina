@@ -37,7 +37,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`Balina API running on port ${port}`);
+  const host = process.env.HOST || '127.0.0.1';
+  await app.listen(port, host);
+  console.log(`Balina API running on ${host}:${port}`);
 }
 bootstrap();
